@@ -125,7 +125,7 @@ class Horario():
         
         # primero checar que no exista colision
         for dia in clase.dias:
-            for x in range(dia.horaI, dia.horaF+1):
+            for x in range(dia.horaI, dia.horaF):
                 if (self.disponible[dia.dia][x] != -1):
                     return -1
         
@@ -133,7 +133,7 @@ class Horario():
         # entonces agregar a arreglo de clases y agregarlo a la matriz
         self.clases.append(clase)
         for dia in clase.dias:
-            for x in range(dia.horaI, dia.horaF+1):
+            for x in range(dia.horaI, dia.horaF):
                 self.disponible[dia.dia][x]= materias.index(clase.materia)
         
         return 0

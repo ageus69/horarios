@@ -23,7 +23,7 @@ _payload = {
 }
 
 
-materias = ['I5893', 'I5894', 'I5892', 'I7022'] # Materias
+materias = ['I7040', 'I7041', 'I7035', 'I5909'] # Materias
 #materias = ['I5893']
 
 diasMap = ['L', 'M', 'I', 'J', 'V', 'S']
@@ -230,14 +230,14 @@ while contador_cupos:
     flag = False
     
     for i in range(len(materias)):
-        for _ in range(10):   
+        for _ in range(100):   
             for _ in range(len(materias)):
                 random_curso = random.choice(cursos)
                 if (random_curso.cupos == 0):
                     continue
                 result = horario.tryToAppend(random_curso)
         
-            if (len(horario.clases) >= 4 - i):   
+            if (len(horario.clases) == 4 - i):   
                 for c in horario.clases:
                     c.cupos -= 1
                     contador_cupos -= 1
@@ -250,12 +250,16 @@ while contador_cupos:
               
         if flag: break    
    
-
+contador = 0
 for h in particulas:
-    print('THIS IS AN HORARIO')
-    for c in h.clases:
-        c.show()
+    if (len(h.clases) == 4):
+        contador += 1
+        h.show()
+        print('THIS IS AN HORARIO')
+        for c in h.clases:
+            c.show()
 
+print(contador)
 
 
 

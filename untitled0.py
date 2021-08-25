@@ -9,7 +9,7 @@ first_url = 'http://consulta.siiau.udg.mx/wco/sspseca.forma_consulta'
 target_url = 'http://consulta.siiau.udg.mx/wco/sspseca.consulta_oferta'
 
 _payload = {
-    'ciclop':202120,
+    'ciclop':202110,
     'cup':'D',
     'crsep':None, # Clave de la materia
     'majrp':'INCO',
@@ -23,16 +23,48 @@ _payload = {
 }
 
 
-materias = ['I7040', 'I7041', 'I7035', 'I5909'] # Materias
+materias = ['I5893', 'I5894', 'I5892', 'I7022'] # Materias
 #materias = ['I5893']
 
 diasMap = ['L', 'M', 'I', 'J', 'V', 'S']
 
 colorMap = ['r', 'b', 'g', 'm', 'y', 'c']
 
-horasMap = ['0700','0855','0900','1055','1100',
-            '1255','1300','1455','1500','1655',
-            '1700','1855','1900','2055'] 
+horasDic = {
+    '0700' : 0,
+    '0755' : 1,
+    '0800' : 1,
+    '0855' : 2,
+    '0900' : 2,
+    '0955' : 3,
+    '1000' : 3,
+    '1055' : 4,
+    '1100' : 4,
+    '1155' : 5,
+    '1200' : 5,
+    '1255' : 6,
+    '1300' : 6,
+    '1355' : 7,
+    '1400' : 7,
+    '1455' : 8,
+    '1500' : 8,
+    '1555' : 9,
+    '1600' : 9,
+    '1655' : 10,
+    '1700' : 10,
+    '1755' : 11,
+    '1800' : 11,
+    '1855' : 12,
+    '1900' : 12,
+    '1955' : 13,
+    '2000' : 13,
+    '2055' : 14,
+    '2100' : 14,
+}
+
+horasMap = ['0700','0800','0900','1000','1100',
+            '1200','1300','1400','1500','1600',
+            '1700','1800','1900','2000','2100'] 
 
 class Dia:  
     def __init__(self, dia=None, horaI=None, horaF=None):
@@ -76,12 +108,12 @@ class Clase:
     
 class Horario():
     def __init__(self):
-        self.disponible = np.full((6,14), -1)
+        self.disponible = np.full((6,15), -1)
         self.fitness = 0
         self.clases = []
         
     def clear(self):
-        self.disponible = np.full((6,14), -1)
+        self.disponible = np.full((6,15), -1)
         self.fitness = 0
         self.clases = []
         
@@ -113,7 +145,7 @@ class Horario():
         for i in range(6):
             flag = False 
             contador = 0
-            for j in range(14):
+            for j in range(15):
                 if j > 0:
                     if self.disponible[i][j] == -1 and self.disponible[i][j-1] != -1 and flag == False:
                         flag = True
@@ -171,8 +203,8 @@ def convertToObjects(cursos_html):
                 dia = tds[2].text.replace('.', '').strip()
                 
                 clase.dias.append(Dia(diasMap.index(dia),
-                                      horasMap.index(hor[0]),
-                                      horasMap.index(hor[1])))     
+                                      horasDic[hor[0]],
+                                      horasDic[hor[1]]))     
                   
         else:
             tds = tabla_horas_dias[0].find_all('td')
@@ -182,8 +214,8 @@ def convertToObjects(cursos_html):
             
             for dia in dias:
                 clase.dias.append(Dia(diasMap.index(dia),
-                                      horasMap.index(horas[0]),
-                                      horasMap.index(horas[1])))
+                                      horasDic[horas[0]],
+                                      horasDic[horas[1]]))
             
         clase.materia = curso('td')[1].text 
         clase.nrc = curso('td')[0].text                                                        

@@ -82,6 +82,7 @@ class Dia:
 class Clase:
     def __init__(self, nrc=None, cupos=-1, materia=''):
         self.materia = materia
+        self.materiaName = ''
         self.cupos = cupos
         self.nrc = nrc
         self.dias = []                  
@@ -101,7 +102,7 @@ class Clase:
         return string
     
     def show(self):
-        print('Materia_%s_nrc_%s_cupos_%d%s' % (self.materia, self.nrc, self.cupos, self.diasToString()))
+        print('Materia_%s_nrc_%s_cupos_%d%s' % (self.materiaName, self.nrc, self.cupos, self.diasToString()))
         
     def showChromosoma(self):
         print('Materia_%s_nrc_%s_cupos_%d%s' % (materias.index(self.materia), self.nrc, self.cupos, self.diasToStringChromosoma()))
@@ -157,8 +158,15 @@ class Horario():
                         flag = False
     
     def show(self):
-        print(self.disponible)
-        print(self.fitness)
+        print(' |07|08|09|10|11|12|13|14|15|16|17|18|19|20|21')
+        for i in range(6):
+            string = str(diasMap[i]) + '|'
+            for j in range(15):
+                if(self.disponible[i][j] == -1):
+                    string += '  |'
+                else:
+                    string += str(self.disponible[i][j]) + ' |'
+            print(string)
 
 
 def getCourses(materias):
@@ -217,7 +225,8 @@ def convertToObjects(cursos_html):
                                       horasDic[horas[0]],
                                       horasDic[horas[1]]))
             
-        clase.materia = curso('td')[1].text 
+        clase.materia = curso('td')[1].text
+        clase.materiaName = curso('td')[2].text 
         clase.nrc = curso('td')[0].text                                                        
         clase.cupos = int(curso('td')[5].text)
         
@@ -284,12 +293,13 @@ while contador_cupos:
    
 contador = 0
 for h in particulas:
-    if (len(h.clases) == 4):
+    if (len(h.clases) > 3):
         contador += 1
-        h.show()
-        print('THIS IS AN HORARIO')
+        print('\nTHIS IS AN HORARIO\n')
         for c in h.clases:
             c.show()
+        print('\n')
+        h.show()
 
 print(contador)
 

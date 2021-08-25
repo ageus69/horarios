@@ -102,10 +102,26 @@ class Horario():
         return 0
             
     def updateFitness(self):
-        pass
+        self.fitness = 0
+        self.fitness += (len(materias) - len(self.clases)) * 20 
+
+        for i in range(6):
+            flag = False 
+            contador = 0
+            for j in range(14):
+                if j > 0:
+                    if self.disponible[i][j] == -1 and self.disponible[i][j-1] != -1 and flag == False:
+                        flag = True
+                    if self.disponible[i][j] == -1 and flag:
+                        contador += 1
+                    if self.disponible[i][j] != -1 and flag:
+                        self.fitness += contador
+                        contador = 0
+                        flag = False
     
     def show(self):
         print(self.disponible)
+        print(self.fitness)
 
 
 def getCourses(materias):
@@ -176,6 +192,7 @@ def convertToObjects(cursos_html):
 cursos = convertToObjects(getCourses(materias)) 
 
 # this is for plotting to see distribution of courses
+"""
 matrices = []
 f = plt.Figure()
 f, axes = plt.subplots(nrows=len(materias))
@@ -191,6 +208,7 @@ for h in range(len(matrices)):
         for j in range(14):
             axes[h].scatter(j,i,matrices[h][i][j] * 10,c=colorMap[h], marker=("s"), alpha=(0.9))            
 plt.show()
+"""
 
 # Algoritmo genetico
 
@@ -208,7 +226,7 @@ for i in range(no_particulas):
     for x in range(len(materias)):
         random_curso = random.choice(cursos)
         
-        if (curso.cupos == 0):
+        if (random_curso.cupos == 0):
             print('Hubo un error con horario %d' %i)
             count_errores = count_errores + 1
             continue
@@ -221,15 +239,21 @@ for i in range(no_particulas):
             continue
         
         random_curso.cupos = random_curso.cupos - 1
-        
+   
+    horario.updateFitness()
     particulas.append(horario)
 
+la_del_fitness_mas_pequenio = particulas[0]
+
 for h in particulas:
+    if(la_del_fitness_mas_pequenio.fitness > h.fitness):
+        la_del_fitness_mas_pequenio = h
     print('THIS IS AN HORARIO')
+    h.show()
     for c in h.clases:
         c.show()
 
-print('no errores %d' %count_errores)
+la_del_fitness_mas_pequenio.show()
 
 
 

@@ -80,6 +80,11 @@ class Horario():
         self.fitness = 0
         self.clases = []
         
+    def clear(self):
+        self.disponible = np.full((6,14), -1)
+        self.fitness = 0
+        self.clases = []
+        
     def tryToAppend(self, clase): # Try to append Class
         # See if there is no class with that name clase.materia
         for c in self.clases:
@@ -213,47 +218,45 @@ plt.show()
 # Algoritmo genetico
 
 # 1 - Generar aleatoriamente una poblacion inicial
-no_particulas = 300
+contador_cupos = 0
+for c in cursos:
+    contador_cupos += c.cupos
+    
+particulas = [] # horarios
 
-# horarios
-particulas = [] 
-
-count_errores = 0
-
-for i in range(no_particulas):
+#Generar n horarios aleatorio
+while contador_cupos:
     horario = Horario()
-    # Generar 300 horarios aleatorios
-    for x in range(len(materias)):
-        random_curso = random.choice(cursos)
+    flag = False
+    
+    for i in range(len(materias)):
+        for _ in range(10):   
+            for _ in range(len(materias)):
+                random_curso = random.choice(cursos)
+                if (random_curso.cupos == 0):
+                    continue
+                result = horario.tryToAppend(random_curso)
         
-        if (random_curso.cupos == 0):
-            print('Hubo un error con horario %d' %i)
-            count_errores = count_errores + 1
-            continue
-            
-        result = horario.tryToAppend(random_curso)
-        
-        if(result == -1):
-            print('Hubo un error con horario %d' %i)
-            count_errores = count_errores + 1
-            continue
-        
-        random_curso.cupos = random_curso.cupos - 1
+            if (len(horario.clases) >= 4 - i):   
+                for c in horario.clases:
+                    c.cupos -= 1
+                    contador_cupos -= 1
+                
+                horario.updateFitness()
+                particulas.append(horario)
+                print('Contador cupos %d' % contador_cupos)
+                flag = True
+                break
+              
+        if flag: break    
    
-    horario.updateFitness()
-    particulas.append(horario)
-
-la_del_fitness_mas_pequenio = particulas[0]
 
 for h in particulas:
-    if(la_del_fitness_mas_pequenio.fitness > h.fitness):
-        la_del_fitness_mas_pequenio = h
     print('THIS IS AN HORARIO')
-    h.show()
     for c in h.clases:
         c.show()
 
-la_del_fitness_mas_pequenio.show()
+
 
 
 

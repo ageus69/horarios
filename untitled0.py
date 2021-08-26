@@ -112,11 +112,25 @@ class Horario():
         self.disponible = np.full((6,15), -1)
         self.fitness = 0
         self.clases = []
+        self.clases_sinColition = []
         
     def clear(self):
         self.disponible = np.full((6,15), -1)
         self.fitness = 0
         self.clases = []
+        self.clases_sinColition = []
+        
+    def colisionClases(self, clase1, clase2):
+        matriz_auxiliar = np.full((6,15), -1)
+        for dia in clase1.dias:
+            for x in range(dia.horaI, dia.horaF):
+                matriz_auxiliar[dia.dia][x] = 0     
+                
+        for dia in clase2.dias:
+            for x in range(dia.horaI, dia.horaF):
+                if (matriz_auxiliar[dia.dia][x] == 0):
+                    return 1 # Colision
+        return 0 # No colision
         
     def quitarClase(self, indice):
         # Quitar de la matriz
@@ -148,12 +162,41 @@ class Horario():
         return 0
             
     def updateFitness(self):
-        self.fitness = 0
         
-        # Variable de cuantas materias faltan
-        self.fitness += (len(materias) - len(self.clases)) * 20 
+        self.fitness = 0
+        self.disponible = self.disponible = np.full((6,15), -1)
+        clases_con_colision = {}
+        
+        # Por cada clase verificar si no hay colisiones, si si hay, no se agregan a la matriz
+        # self.disponible y se aumenta el fitness por algun valor alto. Si no hay colision
+        # entonces agregamos a la matriz, pero para eso hay que inicializarla de nuevo
+        for i in range(0, len(self.clases)-1):
+            for j in range (i+1, len(self.clases)):
+                
+                if (self.colisionClases(self.clases[i], self.clases[j])):
+                    # No agregar a self.disponible
+                    # Aumentar al fitnes 100
+                    clases_con_colision[self.clases[i].nrc] = 1
+                    clases_con_colision[self.clases[j].nrc] = 1
+                    self.fitness += 100
+                    
+        for clase in self.clases:
+            try:
+                clases_con_colision[clase.nrc]   
+            except:
+                self.clases_sinColition.append(clase)
+                for dia in clase.dias:
+                    for x in range(dia.horaI, dia.horaF):
+                        self.disponible[dia.dia][x] = materias.index(clase.materia)
 
-        # Variable de cuantas horas hueco tiene
+        # Variable que mide que tan alejadas estan las materias entre si
+        for i in range(0, len(self.clases_sinColition)-1):
+            for j in range (i+1, len(self.clases_sinColition)):
+                a = abs(self.clases_sinColition[j].dias[0].horaI - self.clases_sinColition[i].dias[0].horaI)
+                if (a > 2):
+                    self.fitness += a
+                    
+        # Variable de cuantas horas hueco tiene (depende directamente de la variable de hasta arriba)
         for i in range(6):
             flag = False 
             contador = 0
@@ -178,6 +221,7 @@ class Horario():
                 else:
                     string += str(self.disponible[i][j]) + ' |'
             print(string)
+        print('Fitness:', self.fitness)
 
 
 def getCourses(materias):
@@ -248,80 +292,31 @@ def convertToObjects(cursos_html):
 # Get all clases of each materia in html and convert them into objects
 cursos = convertToObjects(getCourses(materias)) 
 
-# this is for plotting to see distribution of courses
-"""
-matrices = []
-f = plt.Figure()
-f, axes = plt.subplots(nrows=len(materias))
-for i in range (len(materias)):
-    matrices.append(np.full((6,14), 0))
-for curso in cursos:
-    curso.showChromosoma()
-    for dia in curso.dias: 
-        for x in range(dia.horaI, dia.horaF+1):
-            matrices[materias.index(curso.materia)][dia.dia][x] += curso.cupos
-for h in range(len(matrices)):
-    for i in range(6):
-        for j in range(14):
-            axes[h].scatter(j,i,matrices[h][i][j] * 10,c=colorMap[h], marker=("s"), alpha=(0.9))            
-plt.show()
-"""
-
-# Algoritmo genetico
-
-# 1 - Generar aleatoriamente una poblacion inicial
-contador_cupos = 0
-for c in cursos:
-    contador_cupos += c.cupos
-    
-particulas = [] # horarios
-
-#Generar n horarios aleatorio
-while contador_cupos:
+# Generar 10 horarios con 4 materias random
+horarios = []
+for i in range(10):
     horario = Horario()
-    flag = False
-    
-    for i in range(len(materias)):
-        for _ in range(20):   
-            for _ in range(len(materias)):
-                random_curso = random.choice(cursos)
-                if (random_curso.cupos == 0):
-                    continue
-                result = horario.tryToAppend(random_curso)
-        
-            if (len(horario.clases) == 4 - i):   
-                for c in horario.clases:
-                    c.cupos -= 1
-                    contador_cupos -= 1
+    for _ in range(len(materias)):
+        while len(horario.clases) < 4:
+            flag = True
+            random_curso = random.choice(cursos)
+            
+            if len(horario.clases) == 0:
+                horario.clases.append(random_curso)
+                continue
+            
+            for m in horario.clases:
+                if (random_curso.materia == m.materia):
+                    flag = False
+                    break
                 
-                horario.updateFitness()
-                particulas.append(horario)
-                print('Contador cupos %d' % contador_cupos)
-                flag = True
-                break
-              
-        if flag: break    
-   
-'''    
-contador = 0
-for h in particulas:
-    if (len(h.clases) > 3):
-        contador += 1
-        print('\nTHIS IS AN HORARIO\n')
-        for c in h.clases:
-            c.show()
-        print('\n')
-        h.show()
-
-print(contador)
-'''
-cont = 0
-for p in particulas:
-    if(p.fitness < 3):
-        cont += 1
-        print( ( p.show() ) )
-        print( p.fitness )
-print(cont)
-
+            if(flag):
+                horario.clases.append(random_curso)
+                
+    horarios.append(horario)
+        
+for h in horarios:
+    h.updateFitness()
+    h.show()
 
 

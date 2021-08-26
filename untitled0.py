@@ -118,6 +118,14 @@ class Horario():
         self.fitness = 0
         self.clases = []
         
+    def quitarClase(self, indice):
+        # Quitar de la matriz
+        for dia in self.clases[indice].dias:
+            for x in range(dia.horaI, dia.horaF):
+                self.disponible[dia.dia][x] = -1
+        
+        return self.clases.pop(indice)
+        
     def tryToAppend(self, clase): # Try to append Class
         # See if there is no class with that name clase.materia
         for c in self.clases:
@@ -141,8 +149,11 @@ class Horario():
             
     def updateFitness(self):
         self.fitness = 0
+        
+        # Variable de cuantas materias faltan
         self.fitness += (len(materias) - len(self.clases)) * 20 
 
+        # Variable de cuantas horas hueco tiene
         for i in range(6):
             flag = False 
             contador = 0
@@ -271,7 +282,7 @@ while contador_cupos:
     flag = False
     
     for i in range(len(materias)):
-        for _ in range(100):   
+        for _ in range(20):   
             for _ in range(len(materias)):
                 random_curso = random.choice(cursos)
                 if (random_curso.cupos == 0):
@@ -291,6 +302,7 @@ while contador_cupos:
               
         if flag: break    
    
+'''    
 contador = 0
 for h in particulas:
     if (len(h.clases) > 3):
@@ -302,7 +314,14 @@ for h in particulas:
         h.show()
 
 print(contador)
-
+'''
+cont = 0
+for p in particulas:
+    if(p.fitness < 3):
+        cont += 1
+        print( ( p.show() ) )
+        print( p.fitness )
+print(cont)
 
 
 

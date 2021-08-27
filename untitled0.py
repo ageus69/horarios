@@ -69,10 +69,7 @@ horasMap = ['0700','0800','0900','1000','1100',
 def recombina(horario1, horario2):
     
     # Saco una materia al azar de un horario y la meto en el otro y viceversa
-    horario = Horario()
-    
-    print('horario1',len(horario1.clases))
-    print('horario2',len(horario2.clases))
+    horario = Horario() 
     
     if(len(horario1.clases) == 0 or len(horario2.clases) == 0):
         return horario

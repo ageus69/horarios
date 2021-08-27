@@ -206,7 +206,7 @@ class Horario():
                     self.fitness += 100
                     
                 if (self.clases[i].materia == self.clases[j].materia):
-                    self.fitness += 500
+                    self.fitness += 100
                     
         for clase in self.clases:
             try:
@@ -284,6 +284,7 @@ def getCourses(materias):
 
 def convertToObjects(cursos_html):
     clases = []
+    cupos = 0
     # Obtener solo los datos que nos interesan
     for curso in cursos_html:        
         clase = Clase()
@@ -316,18 +317,41 @@ def convertToObjects(cursos_html):
         clase.materiaName = curso('td')[2].text 
         clase.nrc = curso('td')[0].text                                                        
         clase.cupos = int(curso('td')[5].text)
+        cupos += clase.cupos
         
         clases.append(clase)
             
-    return clases
+    return clases, cupos
 
 # Get all clases of each materia in html and convert them into objects
-cursos = convertToObjects(getCourses(materias)) 
+cursos, cupos = convertToObjects(getCourses(materias)) 
+
+x = []
+
+while cupos:
+    horario = Horario()
+    while ( len(horario.clases) < 4 ):
+        random_curso = random.choice(cursos)
+        if (random_curso.cupos == 0):
+            continue
+        horario.clases.append(random_curso)
+        random_curso.cupos -= 1
+        cupos -= 1
+        if(cupos == 0):
+            break
+    x.append(horario)      
 
 generaciones = 100
-padres = 400
-hijos = 300
- 
+padres = len(x)
+hijos = len(x) - 100
+
+for i in range(padres, padres + hijos):
+    x.append(Horario())
+
+for h in x:
+    h.updateFitness()
+
+"""
 x = [Horario() for _ in range(padres + hijos)]
 for h in x:
     h.updateFitness()
@@ -350,7 +374,7 @@ for i in range(padres):
                 horario.clases.append(random_curso)  
     horario.updateFitness()
     x[i] = horario
-
+"""
 
 
 result = [i for i in sorted(enumerate(x), key=lambda x: x[1].fitness)]

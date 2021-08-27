@@ -205,6 +205,9 @@ class Horario():
                     clases_con_colision[self.clases[j].nrc] = 1
                     self.fitness += 100
                     
+                if (self.clases[i].materia == self.clases[j].materia):
+                    self.fitness += 500
+                    
         for clase in self.clases:
             try:
                 clases_con_colision[clase.nrc]   
@@ -321,7 +324,7 @@ def convertToObjects(cursos_html):
 # Get all clases of each materia in html and convert them into objects
 cursos = convertToObjects(getCourses(materias)) 
 
-generaciones = 10
+generaciones = 100
 padres = 400
 hijos = 300
  

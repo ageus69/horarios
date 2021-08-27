@@ -66,6 +66,26 @@ horasMap = ['0700','0800','0900','1000','1100',
             '1200','1300','1400','1500','1600',
             '1700','1800','1900','2000','2100'] 
 
+def recombina(horario1, horario2):
+    
+    # Saco una materia al azar de un horario y la meto en el otro y viceversa
+    horario = Horario()
+    
+    print('horario1',len(horario1.clases))
+    print('horario2',len(horario2.clases))
+    
+    if(len(horario1.clases) == 0 or len(horario2.clases) == 0):
+        return horario
+    
+    for i in range(len(materias)):    
+        index1 = random.randint(0, 1)
+        if index1 == 0:
+            horario.clases.append(horario1.clases[i])
+        else:
+            horario.clases.append(horario2.clases[i])
+    
+    return horario
+    
 class Dia:  
     def __init__(self, dia=None, horaI=None, horaF=None):
         self.dia = dia
@@ -113,6 +133,10 @@ class Horario():
         self.fitness = 0
         self.clases = []
         self.clases_sinColition = []
+          
+    def __hash__(self):
+        # necessary for instances to behave sanely in dicts and sets.
+        return hash((self.disponible, self.fitness, self.clases, self.clases_sinColition))
         
     def clear(self):
         self.disponible = np.full((6,15), -1)
@@ -165,6 +189,7 @@ class Horario():
         
         self.fitness = 0
         self.disponible = self.disponible = np.full((6,15), -1)
+        self.clases_sinColition = []
         clases_con_colision = {}
         
         # Por cada clase verificar si no hay colisiones, si si hay, no se agregan a la matriz
@@ -188,6 +213,10 @@ class Horario():
                 for dia in clase.dias:
                     for x in range(dia.horaI, dia.horaF):
                         self.disponible[dia.dia][x] = materias.index(clase.materia)
+
+        self.fitness += (len(materias) - len(self.clases)) * 200
+        for c in clases_con_colision:
+            self.fitness += 200
 
         # Variable que mide que tan alejadas estan las materias entre si
         for i in range(0, len(self.clases_sinColition)-1):
@@ -292,31 +321,73 @@ def convertToObjects(cursos_html):
 # Get all clases of each materia in html and convert them into objects
 cursos = convertToObjects(getCourses(materias)) 
 
-# Generar 10 horarios con 4 materias random
-horarios = []
-for i in range(10):
+generaciones = 10
+padres = 400
+hijos = 300
+ 
+x = [Horario() for _ in range(padres + hijos)]
+for h in x:
+    h.updateFitness()
+
+# Inicializacion de los padres
+for i in range(padres):  
     horario = Horario()
     for _ in range(len(materias)):
         while len(horario.clases) < 4:
             flag = True
             random_curso = random.choice(cursos)
-            
             if len(horario.clases) == 0:
                 horario.clases.append(random_curso)
                 continue
-            
             for m in horario.clases:
                 if (random_curso.materia == m.materia):
                     flag = False
-                    break
-                
+                    break  
             if(flag):
-                horario.clases.append(random_curso)
-                
-    horarios.append(horario)
+                horario.clases.append(random_curso)  
+    horario.updateFitness()
+    x[i] = horario
+
+
+
+result = [i for i in sorted(enumerate(x), key=lambda x: x[1].fitness)]
+I = []
+x = []
+for tup in result:
+    I.append(tup[0])
+    x.append(tup[1])
+    
+
+
+#I = [i[0] for i in sorted(range(len(x)), key=lambda k: k.fitness)]
+#x.sort(key=lambda xd: xd.fitness, reverse=False)
+
+# Algoritmo genetico
+for i in range(generaciones):
+    print('generacion:', i)
+    for j in range(hijos):
+        random1 = random.randint(0, padres-1)
+        random2 = random1 
+        while random1 == random2:
+            random2 = random.randint(0, padres-1)
         
-for h in horarios:
-    h.updateFitness()
+        # Recombinacion
+        x[padres + j] = recombina(x[I[random1]], x[I[random2]])
+        
+        # Mutacion
+        
+        # Update fitness
+        x[padres + j].updateFitness()
+        
+    result = [i for i in sorted(enumerate(x), key=lambda x: x[1].fitness)]
+    I = []
+    x = []
+    for tup in result:
+        I.append(tup[0])
+        x.append(tup[1])
+        
+x = x[::-1]        
+for h in x:
     h.show()
 
 

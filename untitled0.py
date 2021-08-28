@@ -1,7 +1,6 @@
 import requests
 import random
 import numpy as np
-import matplotlib.pyplot as plt
 from bs4 import BeautifulSoup
 
 
@@ -22,6 +21,8 @@ _payload = {
     'mostrarp':2000
 }
 
+hijos = 0
+padres = 0
 
 materias = ['I5893', 'I5894', 'I5892', 'I7022'] # Materias
 #materias = ['I5893']
@@ -68,21 +69,48 @@ horasMap = ['0700','0800','0900','1000','1100',
 
 def recombina(horario1, horario2):
     
-    # Saco una materia al azar de un horario y la meto en el otro y viceversa
-    horario = Horario() 
+    # Meter todos los cupos de los 2 horarios padres en cupos list
+    cupos = []
+    for c in horario1.clases:
+        cupos.append(c)
+    for c in horario2.clases:
+        cupos.append(c)
+        
+    # Revolver la lista de cupos
+    random.shuffle(cupos)
     
-    if(len(horario1.clases) == 0 or len(horario2.clases) == 0):
-        return horario
-    
-    for i in range(len(materias)):    
-        index1 = random.randint(0, 1)
-        if index1 == 0:
-            horario.clases.append(horario1.clases[i])
+    # Hacer 2 horarios a partir de las cupos en c
+    horario3 = Horario()
+    horario4 = Horario()
+    for i in range(len(cupos)):
+        if (len(horario3.clases) != len(materias)):
+            horario3.clases.append(cupos[i])
         else:
-            horario.clases.append(horario2.clases[i])
+            horario4.clases.append(cupos[i])
     
-    return horario
     
+    # Meter todos a una lista
+    horario3.updateFitness()
+    horario4.updateFitness()
+    
+    if(horario1.fitness + horario2.fitness > horario3.fitness + horario4.fitness):
+        return  'padres', horario1, horario2
+    else:
+        return  'hijos', horario3, horario4
+
+def seleccion(horarios):
+    fitness_total = 0
+    rand = random.random()
+    p_sum = 0
+    for h in horarios:
+        fitness_total += h.fitness
+        
+    for i in range(1, len(horarios)):
+        p_sum = p_sum + horarios[i].fitness / fitness_total
+        if(p_sum >= rand):
+            return i
+    return(len(horarios) -1)
+
 class Dia:  
     def __init__(self, dia=None, horaI=None, horaF=None):
         self.dia = dia
@@ -102,6 +130,7 @@ class Clase:
         self.materiaName = ''
         self.cupos = cupos
         self.nrc = nrc
+        self.cupo = None
         self.dias = []                  
     
     def diasToString(self):
@@ -127,7 +156,7 @@ class Clase:
 class Horario():
     def __init__(self):
         self.disponible = np.full((6,15), -1)
-        self.fitness = 0
+        self.fitness = 1000
         self.clases = []
         self.clases_sinColition = []
           
@@ -184,7 +213,7 @@ class Horario():
             
     def updateFitness(self):
         
-        self.fitness = 0
+        self.fitness = 1000
         self.disponible = self.disponible = np.full((6,15), -1)
         self.clases_sinColition = []
         clases_con_colision = {}
@@ -200,10 +229,10 @@ class Horario():
                     # Aumentar al fitnes 100
                     clases_con_colision[self.clases[i].nrc] = 1
                     clases_con_colision[self.clases[j].nrc] = 1
-                    self.fitness += 100
+                    self.fitness -= 100
                     
                 if (self.clases[i].materia == self.clases[j].materia):
-                    self.fitness += 100
+                    self.fitness -= 100
                     
         for clase in self.clases:
             try:
@@ -214,16 +243,16 @@ class Horario():
                     for x in range(dia.horaI, dia.horaF):
                         self.disponible[dia.dia][x] = materias.index(clase.materia)
 
-        self.fitness += (len(materias) - len(self.clases)) * 200
+        self.fitness -= (len(materias) - len(self.clases)) * 200
         for c in clases_con_colision:
-            self.fitness += 200
+            self.fitness -= 200
 
         # Variable que mide que tan alejadas estan las materias entre si
         for i in range(0, len(self.clases_sinColition)-1):
             for j in range (i+1, len(self.clases_sinColition)):
                 a = abs(self.clases_sinColition[j].dias[0].horaI - self.clases_sinColition[i].dias[0].horaI)
                 if (a > 2):
-                    self.fitness += a
+                    self.fitness -= a * 10
                     
         # Variable de cuantas horas hueco tiene (depende directamente de la variable de hasta arriba)
         for i in range(6):
@@ -234,9 +263,9 @@ class Horario():
                     if self.disponible[i][j] == -1 and self.disponible[i][j-1] != -1 and flag == False:
                         flag = True
                     if self.disponible[i][j] == -1 and flag:
-                        contador += 1
+                        contador += 100
                     if self.disponible[i][j] != -1 and flag:
-                        self.fitness += contador
+                        self.fitness -= contador
                         contador = 0
                         flag = False
     
@@ -251,6 +280,20 @@ class Horario():
                     string += str(self.disponible[i][j]) + ' |'
             print(string)
         print('Fitness:', self.fitness)
+    
+    def showString(self):
+        string = ''
+        string += (' |07|08|09|10|11|12|13|14|15|16|17|18|19|20|21\n')
+        for i in range(6):
+            string += str(diasMap[i]) + '|'
+            for j in range(15):
+                if(self.disponible[i][j] == -1):
+                    string += '  |'
+                else:
+                    string += str(self.disponible[i][j]) + ' |'
+            string += '\n'
+        string += ('Fitness: %d\n' % self.fitness)
+        return string
 
 
 def getCourses(materias):
@@ -314,6 +357,7 @@ def convertToObjects(cursos_html):
         clase.materiaName = curso('td')[2].text 
         clase.nrc = curso('td')[0].text                                                        
         clase.cupos = int(curso('td')[5].text)
+        clase.cupo = cupos
         cupos += clase.cupos
         
         clases.append(clase)
@@ -323,7 +367,7 @@ def convertToObjects(cursos_html):
 # Get all clases of each materia in html and convert them into objects
 cursos, cupos = convertToObjects(getCourses(materias)) 
 
-x = []
+particulas = []
 
 while cupos:
     horario = Horario()
@@ -336,82 +380,45 @@ while cupos:
         cupos -= 1
         if(cupos == 0):
             break
-    x.append(horario)      
+    horario.updateFitness()
+    particulas.append(horario)      
 
 generaciones = 100
-padres = len(x)
-hijos = len(x) - 100
+poblacion = len(particulas)
 
-for i in range(padres, padres + hijos):
-    x.append(Horario())
-
-for h in x:
-    h.updateFitness()
-
-"""
-x = [Horario() for _ in range(padres + hijos)]
-for h in x:
-    h.updateFitness()
-
-# Inicializacion de los padres
-for i in range(padres):  
-    horario = Horario()
-    for _ in range(len(materias)):
-        while len(horario.clases) < 4:
-            flag = True
-            random_curso = random.choice(cursos)
-            if len(horario.clases) == 0:
-                horario.clases.append(random_curso)
-                continue
-            for m in horario.clases:
-                if (random_curso.materia == m.materia):
-                    flag = False
-                    break  
-            if(flag):
-                horario.clases.append(random_curso)  
-    horario.updateFitness()
-    x[i] = horario
-"""
-
-
-result = [i for i in sorted(enumerate(x), key=lambda x: x[1].fitness)]
-I = []
-x = []
-for tup in result:
-    I.append(tup[0])
-    x.append(tup[1])
-    
-
-
-#I = [i[0] for i in sorted(range(len(x)), key=lambda k: k.fitness)]
-#x.sort(key=lambda xd: xd.fitness, reverse=False)
+ng = particulas
 
 # Algoritmo genetico
 for i in range(generaciones):
     print('generacion:', i)
-    for j in range(hijos):
-        random1 = random.randint(0, padres-1)
+    hijos = []
+    
+    for j in range(0, poblacion, 2):
+        
+        # Escoger en base a a el fitness
+        random1 = seleccion(ng)
         random2 = random1 
         while random1 == random2:
-            random2 = random.randint(0, padres-1)
+            print(random1, random2)
+            random2 = seleccion(ng)
         
         # Recombinacion
-        x[padres + j] = recombina(x[I[random1]], x[I[random2]])
+        padre_o_hijo, res1, res2 = recombina(ng[random1], ng[random2])
+        if(padre_o_hijo == 'padres'):
+            ng.pop(random1)
+            ng.pop(random2)
+          
+        hijos.append(res1)
+        hijos.append(res2)
         
         # Mutacion
-        
-        # Update fitness
-        x[padres + j].updateFitness()
-        
-    result = [i for i in sorted(enumerate(x), key=lambda x: x[1].fitness)]
-    I = []
-    x = []
-    for tup in result:
-        I.append(tup[0])
-        x.append(tup[1])
-        
-x = x[::-1]        
+    ng = hijos
+    
+  
+f = open("result.txt", "w")
+             
 for h in x:
     h.show()
-
+    f.write(h.showString())
+f.close()
 

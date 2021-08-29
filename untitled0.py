@@ -1,5 +1,6 @@
 import requests
 import random
+import copy
 import numpy as np
 from bs4 import BeautifulSoup
 
@@ -67,36 +68,90 @@ horasMap = ['0700','0800','0900','1000','1100',
             '1200','1300','1400','1500','1600',
             '1700','1800','1900','2000','2100'] 
 
-def recombina(horario1, horario2):
-    
-    # Meter todos los cupos de los 2 horarios padres en cupos list
+def recombinaMutacion(h1, h2, h3):
     cupos = []
-    for c in horario1.clases:
+    flags = [False for i in range(len(materias))]
+    for c in h1.clases:
         cupos.append(c)
-    for c in horario2.clases:
+    for c in h2.clases:
+        cupos.append(c)
+    for c in h3.clases:
         cupos.append(c)
         
-    # Revolver la lista de cupos
     random.shuffle(cupos)
     
-    # Hacer 2 horarios a partir de las cupos en c
-    horario3 = Horario()
-    horario4 = Horario()
-    for i in range(len(cupos)):
-        if (len(horario3.clases) != len(materias)):
-            horario3.clases.append(cupos[i])
-        else:
-            horario4.clases.append(cupos[i])
+    h1.clases = []
+    h2.clases = []
+    h3.clases = []
     
+    if(len(cupos) != 0):
+        for i in range(len(materias)):
+            if flags[materias.index(cupos[len(cupos)-1].materia)] == False:
+                flags[materias.index(cupos[len(cupos)-1].materia)] = True
+                h1.clases.append(cupos.pop())
+                if(len(cupos) == 0):
+                    break
+            
+    if(len(cupos) != 0):
+        flags = [False for i in range(len(materias))]         
+        for i in range(len(materias)):
+            if flags[materias.index(cupos[len(cupos)-1].materia)] == False:
+                flags[materias.index(cupos[len(cupos)-1].materia)] = True
+                h1.clases.append(cupos.pop())
+                if(len(cupos) == 0):
+                    break 
+                
+    if(len(cupos) != 0):
+        flags = [False for i in range(len(materias))]
+        for i in range(len(materias)):
+            if flags[materias.index(cupos[len(cupos)-1].materia)] == False:
+                flags[materias.index(cupos[len(cupos)-1].materia)] = True
+                h1.clases.append(cupos.pop())
+                if(len(cupos) == 0):
+                    break
     
-    # Meter todos a una lista
-    horario3.updateFitness()
-    horario4.updateFitness()
+    h1.updateFitness()
+    h2.updateFitness()
+    h3.updateFitness()
+    #return h1, h2, h3
+
+def recombina(horario1, horario2):
+
+    horarios = []
+    for i in range(len(horario1.clases)):
+        for j in range(len(horario2.clases)):
+            if(horario1.clases[i].materia == horario2.clases[j].materia):
+                h = copy.deepcopy(horario1)
+                h2 = copy.deepcopy(horario2)
+                aux = h.clases[i]
+                h.clases[i] = horario2.clases[j]
+                h2.clases[j] = aux
+                h.updateFitness()
+                h2.updateFitness()
+                horarios.append(h)
+                horarios.append(h2)
+    horarios.sort(key=lambda x: x.fitness, reverse=True)
     
-    if(horario1.fitness + horario2.fitness > horario3.fitness + horario4.fitness):
-        return  'padres', horario1, horario2
-    else:
-        return  'hijos', horario3, horario4
+    if(len(horarios) > 0):
+        if(horarios[0].fitness > horario1.fitness and horarios[0].fitness > horario2.fitness): 
+            h = Horario()
+            
+            for c in horario1.clases:
+                h.clases.append(c)
+                
+            for c in horario2.clases:
+                h.clases.append(c)
+            
+            for c_ in horarios[0].clases:
+                for c in h.clases:
+                    if(c.cupo == c_.cupo):
+                        h.clases.remove(c)
+                        break
+
+            h.updateFitness()
+            #if(h.fitness > horario1.fitness and h.fitness > horario2.fitness):
+            return horarios[0], h
+    return horario1, horario2
 
 def seleccion(horarios):
     fitness_total = 0
@@ -104,12 +159,19 @@ def seleccion(horarios):
     p_sum = 0
     for h in horarios:
         fitness_total += h.fitness
-        
+          
     for i in range(1, len(horarios)):
-        p_sum = p_sum + horarios[i].fitness / fitness_total
+        try:
+            p_sum = p_sum + horarios[i].fitness / fitness_total
+        except:
+            p_sum = random.randint(0, len(horarios)-1)
         if(p_sum >= rand):
             return i
-    return(len(horarios) -1)
+        
+    return len(horarios)-1
+    #for i in range(len(horarios)):
+    #    if horarios[i].fitness > 1 and horarios[i].fitness < 180:
+    #        return random.randint(i, len(horarios)-1)
 
 class Dia:  
     def __init__(self, dia=None, horaI=None, horaF=None):
@@ -121,8 +183,7 @@ class Dia:
         return ('%s_%s-%s' % (diasMap[self.dia], horasMap[self.horaI], horasMap[self.horaF]))
     
     def toStringChromosoma(self):
-        return ('%d_%d-%d' % (self.dia, self.horaI, self.horaF))
-    
+        return ('%d_%d-%d' % (self.dia, self.horaI, self.horaF))   
 
 class Clase:
     def __init__(self, nrc=None, cupos=-1, materia=''):
@@ -155,18 +216,15 @@ class Clase:
     
 class Horario():
     def __init__(self):
+        self.id = -1
         self.disponible = np.full((6,15), -1)
-        self.fitness = 1000
+        self.fitness = 200
         self.clases = []
         self.clases_sinColition = []
-          
-    def __hash__(self):
-        # necessary for instances to behave sanely in dicts and sets.
-        return hash((self.disponible, self.fitness, self.clases, self.clases_sinColition))
         
     def clear(self):
         self.disponible = np.full((6,15), -1)
-        self.fitness = 0
+        self.fitness = 200
         self.clases = []
         self.clases_sinColition = []
         
@@ -181,39 +239,10 @@ class Horario():
                 if (matriz_auxiliar[dia.dia][x] == 0):
                     return 1 # Colision
         return 0 # No colision
-        
-    def quitarClase(self, indice):
-        # Quitar de la matriz
-        for dia in self.clases[indice].dias:
-            for x in range(dia.horaI, dia.horaF):
-                self.disponible[dia.dia][x] = -1
-        
-        return self.clases.pop(indice)
-        
-    def tryToAppend(self, clase): # Try to append Class
-        # See if there is no class with that name clase.materia
-        for c in self.clases:
-            if (c.materia == clase.materia):
-                return -1
-        
-        # primero checar que no exista colision
-        for dia in clase.dias:
-            for x in range(dia.horaI, dia.horaF):
-                if (self.disponible[dia.dia][x] != -1):
-                    return -1
-        
-        # si se llega a este punto, entonces no hay colisiones
-        # entonces agregar a arreglo de clases y agregarlo a la matriz
-        self.clases.append(clase)
-        for dia in clase.dias:
-            for x in range(dia.horaI, dia.horaF):
-                self.disponible[dia.dia][x]= materias.index(clase.materia)
-        
-        return 0
             
     def updateFitness(self):
         
-        self.fitness = 1000
+        self.fitness = 200
         self.disponible = self.disponible = np.full((6,15), -1)
         self.clases_sinColition = []
         clases_con_colision = {}
@@ -222,37 +251,36 @@ class Horario():
         # self.disponible y se aumenta el fitness por algun valor alto. Si no hay colision
         # entonces agregamos a la matriz, pero para eso hay que inicializarla de nuevo
         for i in range(0, len(self.clases)-1):
-            for j in range (i+1, len(self.clases)):
-                
+            for j in range (i+1, len(self.clases)):      
                 if (self.colisionClases(self.clases[i], self.clases[j])):
-                    # No agregar a self.disponible
-                    # Aumentar al fitnes 100
-                    clases_con_colision[self.clases[i].nrc] = 1
-                    clases_con_colision[self.clases[j].nrc] = 1
-                    self.fitness -= 100
+                    clases_con_colision[self.clases[i].cupo] = 1
+                    clases_con_colision[self.clases[j].cupo] = 1
                     
                 if (self.clases[i].materia == self.clases[j].materia):
-                    self.fitness -= 100
+                    self.fitness -= 90 # Castigo que se repitan materias
                     
         for clase in self.clases:
             try:
-                clases_con_colision[clase.nrc]   
+                # Castigo colision
+                clases_con_colision[clase.cupo] 
+                self.fitness -= 60
             except:
+                # Escribo en la matriz disponible, las clases que no tienen colision
                 self.clases_sinColition.append(clase)
                 for dia in clase.dias:
                     for x in range(dia.horaI, dia.horaF):
                         self.disponible[dia.dia][x] = materias.index(clase.materia)
 
-        self.fitness -= (len(materias) - len(self.clases)) * 200
-        for c in clases_con_colision:
-            self.fitness -= 200
+        
+        self.fitness -= (len(materias) - len(self.clases)) * (40) # Castigo que falten materias
+            
 
         # Variable que mide que tan alejadas estan las materias entre si
         for i in range(0, len(self.clases_sinColition)-1):
             for j in range (i+1, len(self.clases_sinColition)):
                 a = abs(self.clases_sinColition[j].dias[0].horaI - self.clases_sinColition[i].dias[0].horaI)
                 if (a > 2):
-                    self.fitness -= a * 10
+                    self.fitness -= (a-2)//2 # Castigo distancias
                     
         # Variable de cuantas horas hueco tiene (depende directamente de la variable de hasta arriba)
         for i in range(6):
@@ -263,11 +291,15 @@ class Horario():
                     if self.disponible[i][j] == -1 and self.disponible[i][j-1] != -1 and flag == False:
                         flag = True
                     if self.disponible[i][j] == -1 and flag:
-                        contador += 100
+                        contador += 2
                     if self.disponible[i][j] != -1 and flag:
-                        self.fitness -= contador
+                        self.fitness -= contador # Castigo hucos
                         contador = 0
                         flag = False
+        if (len(self.clases) == 0):
+            self.fitness = 1
+        if self.fitness < 0:
+            self.fitness = 1
     
     def show(self):
         print(' |07|08|09|10|11|12|13|14|15|16|17|18|19|20|21')
@@ -279,6 +311,11 @@ class Horario():
                 else:
                     string += str(self.disponible[i][j]) + ' |'
             print(string)
+        print('')
+        string = ''
+        for c in self.clases:
+            string += ('materia: %s nrc: %s cupo %d\n' %( c.materia, c.nrc, c.cupo))
+        print(string)
         print('Fitness:', self.fitness)
     
     def showString(self):
@@ -293,8 +330,10 @@ class Horario():
                     string += str(self.disponible[i][j]) + ' |'
             string += '\n'
         string += ('Fitness: %d\n' % self.fitness)
+        for c in self.clases:
+            string += ('materia: %s nrc: %s \n' %( c.materia, c.nrc))
+        string += ('no_materias>%d\n' % len(self.clases)) 
         return string
-
 
 def getCourses(materias):
     with requests.session() as s:
@@ -324,6 +363,10 @@ def getCourses(materias):
 
 def convertToObjects(cursos_html):
     clases = []
+    
+    for i in range(len(materias)):
+        clases.append([])
+        
     cupos = 0
     # Obtener solo los datos que nos interesan
     for curso in cursos_html:        
@@ -358,67 +401,150 @@ def convertToObjects(cursos_html):
         clase.nrc = curso('td')[0].text                                                        
         clase.cupos = int(curso('td')[5].text)
         clase.cupo = cupos
-        cupos += clase.cupos
         
-        clases.append(clase)
+        for i in range(clase.cupos): 
+            clase.cupo = cupos
+            cupos += 1
+            clases[materias.index(clase.materia)].append(copy.deepcopy(clase))
             
+         
+        
+    # Un arreglo de 2 dimenciones donde estan los cupos separados por materias
     return clases, cupos
+
+def genera_aleatorio(_cupos, _curses):
+    
+    cupos = _cupos
+    curses = copy.deepcopy(_curses)
+    particulas = []
+    
+    while cupos:
+        horario = Horario()
+        #while ( len(horario.clases) < len(materias) ):
+            
+        if(cupos == 0):
+            break
+        
+        for i in range(len(materias)): #Por cada materia de las que deberia
+            
+            if(len(curses[i]) == 0):
+                continue
+        
+            r = random.randint(0, len(curses[i]) - 1) #Escoges un cupo de esa materia
+            random_curso = curses[i][r]
+            
+            horario.clases.append(random_curso)
+            curses[i].remove(random_curso)
+            cupos -= 1  
+            
+            if(len(horario.clases) == len(materias)):
+                break
+                                             
+        #print('nuevo horario', len(particulas), 'cupos remaning', cupos, 'noclases', len(horario.clases))
+        horario.updateFitness()
+        horario.id = len(particulas)
+        particulas.append(horario) 
+        
+    return particulas
 
 # Get all clases of each materia in html and convert them into objects
 cursos, cupos = convertToObjects(getCourses(materias)) 
-
-particulas = []
-
-while cupos:
-    horario = Horario()
-    while ( len(horario.clases) < 4 ):
-        random_curso = random.choice(cursos)
-        if (random_curso.cupos == 0):
-            continue
-        horario.clases.append(random_curso)
-        random_curso.cupos -= 1
-        cupos -= 1
-        if(cupos == 0):
-            break
-    horario.updateFitness()
-    particulas.append(horario)      
+particulas = genera_aleatorio(cupos, cursos)
 
 generaciones = 100
 poblacion = len(particulas)
-
 ng = particulas
 
 # Algoritmo genetico
 for i in range(generaciones):
-    print('generacion:', i)
+    
     hijos = []
+    counter = 0
+      
+    for n in range(len(ng)):
+        if(ng[n].fitness >= 180):
+            counter += 1
+                      
+    print('generacion', i, 'buenos horarios', counter)
+            
     
     for j in range(0, poblacion, 2):
         
-        # Escoger en base a a el fitness
-        random1 = seleccion(ng)
-        random2 = random1 
-        while random1 == random2:
-            print(random1, random2)
-            random2 = seleccion(ng)
+        if (len(ng) == 0):
+            break
+        if(len(ng) == 1):
+            aux = ng[0]
+            ng.remove(ng[0])
+            hijos.append(aux)
+            break
         
-        # Recombinacion
-        padre_o_hijo, res1, res2 = recombina(ng[random1], ng[random2])
-        if(padre_o_hijo == 'padres'):
-            ng.pop(random1)
-            ng.pop(random2)
-          
+        r1 = random.randint(0, len(ng)-1)
+        r2 = 0
+
+        if (len(ng) == 2):
+            r1 = 0
+            r2 = 1
+        else:
+            r1 = seleccion(ng) # Escoger en base a a el fitness
+            r2 = r1 
+            while r1 == r2:
+                r2 = seleccion(ng)
+                #if(random.randint(0, 1)):
+                r2 = random.randint(0, (len(ng)-1))
+        if(r1 == None or r2 == None):
+            r1 = 0
+            r2 = 1
+            
+        a = ng[r1]
+        b = ng[r2]
+        ng.remove(a)
+        ng.remove(b)
+        
+        # Recombinacion        
+        res1, res2 = recombina(a, b)
+        
+        
+        #mutacion
+        if(random.randint(0, 999999) == 250):
+            print('MUTACION')
+            victima = 0
+            for i in range(len(ng)-1):
+                if(len(ng) > 0):
+                    if(ng[i].fitness > 1):
+                        victima = i
+                        break
+                
+            victima_horario = ng[victima]
+            ng.remove(victima_horario)
+            
+            recombinaMutacion(res1, res2, victima_horario)
+            hijos.append(victima_horario)
+        
         hijos.append(res1)
-        hijos.append(res2)
-        
-        # Mutacion
-    ng = hijos
-    
-  
-f = open("result.txt", "w")
+        hijos.append(res2)  
              
-for h in x:
-    h.show()
+        """
+        if(random.randint(0, 10) == 3):
+            r1 = random.randint(0, len(ng)-1)
+            r2 = random.randint(0, len(ng)-1)
+            if (r2 == r1):
+                if (r2 == 0):
+                    r2 = r1 + 1
+            
+            a = ng[r1]
+            b = ng[r2]
+            ng.remove(a)
+            ng.remove(b)
+            res1, res2 = recombina(a, b)
+            hijos.append(res1)
+            hijos.append(res2)
+        """
+    
+    ng = hijos
+    ng.sort(key=lambda x: x.fitness)
+
+f = open("result.txt", "w")
+for h in ng:
     f.write(h.showString())
 f.close()
 

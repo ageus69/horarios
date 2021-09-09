@@ -30,17 +30,19 @@ app.ws('/', (ws, req) => {
   console.log('nueva conection')
   ws.on('message', msg => {
     
-    var data = JSON.parse(msg)
- 
+    try {
+      var data = JSON.parse(msg)
+    } catch (error) {
+      return
+    }
+
     if(data['type'] == 'postMaterias') {
       const python = spawn('python', ['gaCupos.py', data['body'], parseInt(data['epochs'], 10), data['cal']]);
       
       python.stdout.on('data', (data) => {
-        jsonData = {}
         try {
           jsonData = JSON.parse(data.toString())
         } catch (error) {
-          console.log(error)
           return
         }
         

@@ -1,7 +1,6 @@
 .forma {
   display: block;
   padding: 1em;
-  background-color: #f6f6d9;
 }
 .forma label {
   font-size: 1.5em;
@@ -17,6 +16,7 @@
   text-align: center;
 }
 .forma input {
+  font-size: 1em;
   width: 80px;
   margin: 0.5em;
   display: inline-block;
@@ -24,17 +24,13 @@
 }
 
 .pairSpan {
-  background-color: rgb(188, 204, 233);
-  padding: 5px;
+  padding: 30px;
   font-size: 1.5em;
   font-family: monospace;
   white-space: pre-line
 }
 
-.nonSpan {
-  background-color: rgb(193, 241, 196);
-  padding: 5px;
-  font-size: 1.5em;
-  font-family: monospace;
-  white-space: pre-line
+.spanContainer {
+  border: solid;
+  margin-top: 30px;
 }

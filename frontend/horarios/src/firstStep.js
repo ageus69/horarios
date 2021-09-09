@@ -3,7 +3,7 @@ import './index.css'
 
 const socketProtocol = (window.location.protocol === 'https:' ? 'wss:' : 'ws:')
 const echoSocketUrl = socketProtocol + '//' + 'ia-server-horarios.herokuapp.com'
-let socket
+//const echoSocketUrl = socketProtocol + '//' + 'localhost:3001'
 
 function Step1 () {
   const [messageFromServer, setMessageFromServer] = useState('')
@@ -16,32 +16,7 @@ function Step1 () {
   const [calendario, setCalendario] = useState(0)
   const [inputs, setInputs] = useState([])
   const [resultados, setResultados] = useState([])
-  
-  useEffect(() => {
-    socket = new WebSocket(echoSocketUrl, 'echo-protocol');
-    socket.onmessage = e => {
-      if(e.data.length === 0){
-        return
-      }
-      console.log('len', e.data.length)
-      console.log('len', e.data)
-      console.log('')
-      var data = JSON.parse(e.data)
-      //console.log(data)
-      if(data['type'] === 'status') {
-        setMessageFromServer(data['body'])
-      }
-      if(data['type'] === 'horario') {
-        setNoHorarios(noHorarios + 1)
-        if(parseInt(data['key']) % 2 === 0) {
-          setResultados(resultados => [...resultados, <span className='pairSpan' key={data['key']}>{data['body']}</span>])
-        }
-        else {
-          setResultados(resultados => [...resultados, <span className='nonSpan' key={data['key']}>{data['body']}</span>])
-        }
-      }
-    } 
-  }, [])
+  const [socketConst, setSocketConst] = useState(null)
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -53,10 +28,45 @@ function Step1 () {
     for (let i=0; i<noMaterias; i++) {
       list.push(document.getElementById(`inp${i}`).value)
     }
-    console.log(list)
+
     setIsSetMaterias(true)
     setIsProcessing(true)
-    socket.send(JSON.stringify({type:'postMaterias', body:list, epochs:noEpochs, cal:calendario}))
+
+    var socket = new WebSocket(echoSocketUrl, 'echo-protocol');
+    socket.onmessage = e => {
+      if(e.data.length === 0){
+        return
+      }
+      var data = JSON.parse(e.data)
+      if(data['type'] === 'status') {
+        setMessageFromServer(data['body'])
+      }
+      if(data['type'] === 'horario') {
+        setNoHorarios(noHorarios + 1)
+        if(parseInt(data['key']) % 2 === 0) {
+          setResultados(resultados => [...resultados, 
+            <div className='spanContainer' key={data['key']}>
+              <span className='pairSpan'>
+                {data['body']}
+              </span>
+            </div>
+          ])
+        }
+        else {
+          setResultados(resultados => [...resultados, 
+            <div className='spanContainer' key={data['key']}>
+              <span className='pairSpan'>
+                {data['body']}
+              </span>
+            </div>
+          ])
+        }
+      }
+    } 
+    socket.onopen = function () {
+      socket.send(JSON.stringify({type:'postMaterias', body:list, epochs:noEpochs, cal:calendario}))
+    };
+    setSocketConst(socket)
   }
   
 
@@ -123,7 +133,7 @@ function Step1 () {
   else if(isProcessing && messageFromServer !== 'finished') {
     return (
       <>
-        <h1>Generation: {messageFromServer}</h1>
+        <h1>Generation: {messageFromServer || 0}</h1>
       </>
     )
   }
@@ -131,7 +141,7 @@ function Step1 () {
   else {
     return (
       <>
-        <h1>Resultados: </h1>
+        <div><h1>Resultados:</h1></div>
         {resultados}
       </>
     )
@@ -139,7 +149,5 @@ function Step1 () {
   
 
 }
-
-
 
 export default Step1

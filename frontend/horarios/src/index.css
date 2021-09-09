@@ -1,0 +1,40 @@
+.forma {
+  display: block;
+  padding: 1em;
+  background-color: #f6f6d9;
+}
+.forma label {
+  font-size: 1.5em;
+  margin: 0.2em;
+  display: inline-block;
+}
+.forma button {
+  font-size: 1em;
+  margin: 0.5em;
+  text-align: right;
+}
+.forma div {
+  text-align: center;
+}
+.forma input {
+  width: 80px;
+  margin: 0.5em;
+  display: inline-block;
+  justify-content: center;
+}
+
+.pairSpan {
+  background-color: rgb(188, 204, 233);
+  padding: 5px;
+  font-size: 1.5em;
+  font-family: monospace;
+  white-space: pre-line
+}
+
+.nonSpan {
+  background-color: rgb(193, 241, 196);
+  padding: 5px;
+  font-size: 1.5em;
+  font-family: monospace;
+  white-space: pre-line
+}

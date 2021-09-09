@@ -2,6 +2,8 @@ import requests
 import random
 import copy
 import numpy as np
+import sys
+import json
 from bs4 import BeautifulSoup
 
 
@@ -9,7 +11,7 @@ first_url = 'http://consulta.siiau.udg.mx/wco/sspseca.forma_consulta'
 target_url = 'http://consulta.siiau.udg.mx/wco/sspseca.consulta_oferta'
 
 _payload = {
-    'ciclop':202110,
+    'ciclop':sys.argv[3],
     'cup':'D',
     'crsep':None, # Clave de la materia
     'majrp':None,
@@ -22,11 +24,8 @@ _payload = {
     'mostrarp':2000
 }
 
-hijos = 0
-padres = 0
-
-materias = ['IF891', 'I7035', 'I7040', 'I7418'] # Materias
-#materias = ['I5893']
+materias = sys.argv[1].split(',')
+generaciones = int(sys.argv[2])
 
 diasMap = ['L', 'M', 'I', 'J', 'V', 'S']
 
@@ -186,6 +185,7 @@ class Clase:
     def __init__(self, nrc=None, cupos=-1, materia=''):
         self.materia = materia
         self.materiaName = ''
+        self.profe = ''
         self.cupos = cupos
         self.nrc = nrc
         self.cupo = None
@@ -215,13 +215,13 @@ class Horario():
     def __init__(self):
         self.id = -1
         self.disponible = np.full((6,15), -1)
-        self.fitness = 200
+        self.fitness = 1000
         self.clases = []
         self.clases_sinColition = []
         
     def clear(self):
         self.disponible = np.full((6,15), -1)
-        self.fitness = 200
+        self.fitness = 1000
         self.clases = []
         self.clases_sinColition = []
         
@@ -239,7 +239,7 @@ class Horario():
             
     def updateFitness(self):
         
-        self.fitness = 200
+        self.fitness = 1000
         self.disponible = self.disponible = np.full((6,15), -1)
         self.clases_sinColition = []
         clases_con_colision = {}
@@ -316,21 +316,41 @@ class Horario():
         print('Fitness:', self.fitness)
     
     def showString(self):
-        string = ''
-        string += (' |07|08|09|10|11|12|13|14|15|16|17|18|19|20|21\n')
+        string = '\n'
+        string += ('_|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21\n')
         for i in range(6):
             string += str(diasMap[i]) + '|'
             for j in range(15):
                 if(self.disponible[i][j] == -1):
-                    string += '  |'
+                    string += '__|'
                 else:
-                    string += str(self.disponible[i][j]) + ' |'
-            string += '\n'
-        string += ('Fitness: %d\n' % self.fitness)
-        for c in self.clases:
-            string += ('materia: %s nrc: %s \n' %( c.materia, c.nrc))
-        string += ('no_materias>%d\n' % len(self.clases)) 
+                    string += str(self.disponible[i][j]) + '_|'
+            string += '\n\n'
+        #string += ('Fitness: %d\n\n' % self.fitness)
+        aux = ''
+        for i in range(len(self.clases)):
+            aux += self.clases[i].nrc + ' '
+            string += ('materia %d: \n\t %s(%s)\n nrc: %s\n profe: %s\n\n' %(i, self.clases[i].materiaName, self.clases[i].materia, self.clases[i].nrc, self.clases[i].profe))
+
+        string += 'nrcs ' + aux + '\n'
+
         return string
+
+    def getJson(self):
+        data = {}
+        data['id'] = self.id
+        data['fitnes'] = self.fitness
+        clases_object = {}
+        for clase in self.clases:
+            clases_object['clave'] = clase.materia
+            clases_object['profe'] = clase.profe
+            clases_object['nrc'] = clase.nrc
+            clases_object['dias'] = {}
+            for dia in clase.dias:
+                clases_object['dias'][dia.dia] = {'horaI':dia.horaI, 'horaF':dia.horaF}
+        data['clases'] = clases_object
+        return data
+
 
 def getCourses(materias):
     with requests.session() as s:
@@ -346,6 +366,7 @@ def getCourses(materias):
                 # y por ultimo convertir el plain text to html elements
                 s.get(first_url)
                 r = s.post(target_url, data=_payload)
+
                 soup = BeautifulSoup(r.content, 'html.parser')
             
                 # Obtener todos los cursos de una materia
@@ -355,7 +376,6 @@ def getCourses(materias):
             return cursos
             
         except:
-            print('error')
             return cursos
 
 def convertToObjects(cursos_html):
@@ -367,6 +387,10 @@ def convertToObjects(cursos_html):
     cupos = 0
     # Obtener solo los datos que nos interesan
     for curso in cursos_html:        
+
+        if int(curso('td')[6].text) <= 0:
+            continue
+
         clase = Clase()
         
         # Puede haber una fila o dos
@@ -396,21 +420,19 @@ def convertToObjects(cursos_html):
         clase.materia = curso('td')[1].text
         clase.materiaName = curso('td')[2].text 
         clase.nrc = curso('td')[0].text                                                        
-        clase.cupos = int(curso('td')[5].text)
+        clase.cupos = int(curso('td')[6].text)
         clase.cupo = cupos
+        clase.profe = curso.find_all("td", class_="tdprofesor")[1].text
         
-        for i in range(clase.cupos): 
-            clase.cupo = cupos
-            cupos += 1
-            clases[materias.index(clase.materia)].append(copy.deepcopy(clase))
-            
+        
+        clases[materias.index(clase.materia)].append(copy.deepcopy(clase))
+        cupos+=1
          
         
     # Un arreglo de 2 dimenciones donde estan los cupos separados por materias
     return clases, cupos
 
 def genera_aleatorio(_cupos, _curses):
-    
     cupos = _cupos
     curses = copy.deepcopy(_curses)
     particulas = []
@@ -423,16 +445,17 @@ def genera_aleatorio(_cupos, _curses):
             break
         
         for i in range(len(materias)): #Por cada materia de las que deberia
-            
+
             if(len(curses[i]) == 0):
-                continue
-        
-            r = random.randint(0, len(curses[i]) - 1) #Escoges un cupo de esa materia
-            random_curso = curses[i][r]
-            
-            horario.clases.append(random_curso)
-            curses[i].remove(random_curso)
-            cupos -= 1  
+                r = random.randint(0, len(_curses[i]) - 1)
+                random_curso = _curses[i][r]
+                horario.clases.append(random_curso)
+            else:
+                r = random.randint(0, len(curses[i]) - 1) #Escoges un cupo de esa materia
+                random_curso = curses[i][r]
+                horario.clases.append(random_curso)
+                curses[i].remove(random_curso)
+                cupos -= 1
             
             if(len(horario.clases) == len(materias)):
                 break
@@ -443,13 +466,20 @@ def genera_aleatorio(_cupos, _curses):
         
     return particulas
 
+
+
+
 # Get all clases of each materia in html and convert them into objects
 cursos, cupos = convertToObjects(getCourses(materias)) 
 particulas = genera_aleatorio(cupos, cursos)
 
-generaciones = 100
+for i in range(1):
+    particulas.extend(genera_aleatorio(cupos, cursos))
 poblacion = len(particulas)
 ng = particulas
+
+sys.stdout.flush() 
+print(poblacion)
 
 # Algoritmo genetico
 for i in range(generaciones):
@@ -460,9 +490,13 @@ for i in range(generaciones):
     for n in range(len(ng)):
         if(len(ng[n].clases) == len(materias) and ng[n].fitness == 200):
             counter += 1
-                      
-    print('generacion', i, 'horarios perfectos con 4 materias', counter)
-            
+   
+    msg = {'type':'status','body':i+1}
+
+    sys.stdout.flush() 
+    print(json.dumps(msg))
+    #print(i)
+        
     
     for j in range(0, poblacion, 2):
         
@@ -502,7 +536,6 @@ for i in range(generaciones):
         
         #mutacion
         if(random.randint(0, 999999) == 250):
-            print('MUTACION')
             victima = 0
             for i in range(len(ng)-1):
                 if(len(ng) > 0):
@@ -522,8 +555,33 @@ for i in range(generaciones):
     ng = hijos
     ng.sort(key=lambda x: x.fitness)
 
-f = open("result.txt", "w")
+ng = ng[::-1]
+buenos = []
+
 for h in ng:
-    f.write(h.showString())
-f.close()
+    if(len(h.clases_sinColition) == len(materias)):
+        buenos.append(h)
+
+buenos.sort(key=lambda x: x.fitness)
+buenos = buenos[::-1]
+# Devolver un arreglo de cadenas
+
+
+if (len(buenos) < 300):
+    for i in range(len(buenos)):
+        #f.write(h.showString())     
+        msg = {'type':'horario','body':buenos[i].showString(),'key':i}
+        sys.stdout.flush() 
+        print(json.dumps(msg))
+#f.close()
+else:
+    for i in range(300):
+        #f.write(h.showString())     
+        msg = {'type':'horario','body':buenos[i].showString(),'key':i}
+        sys.stdout.flush() 
+        print(json.dumps(msg))  
+
+msg = {'type':'status','body':'finished'}
+sys.stdout.flush() 
+print(json.dumps(msg))
 

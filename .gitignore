@@ -1,0 +1,15 @@
+/amauryJson
+firma.png
+modelo.png
+GeneradorDeHorarios.pdf
+/.vscode
+/frontend/horarios/.git
+/ia_server/.git
+/web_server/.git
+/frontend/.vscode
+/frontend/horarios/node_modules
+/ia_server/node_modules
+/ia_server/.vscode
+/ia_server/ga.py
+/web_server/.vscode
+/web_server/node_modules

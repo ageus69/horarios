@@ -1,0 +1,95 @@
+body {
+  background-color: rgb(255, 255, 255);
+}
+
+.forma {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  
+  width: 80%;
+  height: 80%;
+
+  padding: 10px;
+
+  display: block;
+}
+
+.tableSchedule tr {
+  border: 1px solid black;
+  border-collapse:collapse
+}
+
+.tableSchedule th {
+  border: 1px solid black;
+  font-size: 1em;
+}
+
+.tableSchedule td {
+  border: 1px solid black;
+  padding: 10px;
+  font-size: 1em;
+}
+
+
+.table {
+  border-collapse:collapse
+}
+
+#HeaderTable {
+  font-size: 1.5em;
+  background-color: blue;
+  color: white;
+  text-align: center;
+}
+
+.table tr {
+  border: 1px solid black;
+}
+
+.table th {
+  font-size: 1.5em;
+  text-align: right;
+}
+
+.table td {
+  padding: 10px;
+  font-size: 1.5em;
+}
+
+.firstDiv {
+  background-color: rgb(255, 255, 255);
+}
+
+.forma label {
+  font-size: 1.5em;
+  margin: 0.2em;
+  display: inline-block;
+}
+.forma button {
+  font-size: 1em;
+  margin: 0.5em;
+  text-align: right;
+}
+
+.forma input {
+  font-size: 1em;
+  width: 80px;
+  margin: 0.5em;
+  display: inline-block;
+  justify-content: center;
+}
+
+.pairSpan {
+  padding: 30px;
+  font-size: 1.5em;
+  font-family: monospace;
+  white-space: pre-line
+}
+
+.spanContainer {
+  border: solid;
+  margin-top: 30px;
+}
+
